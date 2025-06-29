@@ -1,9 +1,10 @@
-entrypoint = "main.sh"
-modules = ["bash"]
+language = "nodejs"
+run = "npm start"
 
-[nix]
-channel = "stable-24_05"
+[[ports]]
+localPort = 3000
+externalPort = 80
 
-[deployment]
-run = ["bash", "main.sh"]
-deploymentTarget = "cloudrun"
+[[ports]]
+localPort = 3001
+externalPort = 3001
