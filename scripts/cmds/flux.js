@@ -4,7 +4,7 @@ const fs = require("fs-extra");
 module.exports = {
   config: {
     name: "flux",
-    aliases: ["imggen", "gen", "flx"],
+    aliases: [],
     version: "5.0",
     author: "nexo_here",
     countDown: 5,
