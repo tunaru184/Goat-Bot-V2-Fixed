@@ -1,55 +1,116 @@
-const axios = require ("axios");
-const fs = require ("fs-extra");
+const axios = require("axios");
 
-module.exports = {
-  config: {
-    name: "pair",
-    aliases: [],
-    version: "1.0",
-    author: "nexo_here",
-    countDown: 5,
-    role: 0,
-    shortDescription: " ",
-    longDescription: "",
-    category: "love",
-    guide: "{pn}"
-  },
+module.exports.config = {
+  name: "pair",
+  version: "2.0.0",
+  aliases: ["ship", "love"],
+  credits: "ChatGPT",
+  countDown: 5,
+  hasPermssion: 0,
+  description: "Pair two people with love percentage",
+  commandCategory: "fun",
+  usages: "{pn} [with <name>]",
+};
 
-  onStart: async function({ api, event, threadsData, usersData }) {
+module.exports.run = async ({ api, event, args }) => {
+  try {
+    let threadInfo = await api.getThreadInfo(event.threadID);
+    let participants = threadInfo.participantIDs;
 
-    const { threadID, messageID, senderID } = event;
-    const { participantIDs } = await api.getThreadInfo(threadID);
-    var tle = Math.floor(Math.random() * 101);
-    var namee = (await usersData.get(senderID)).name
-    const botID = api.getCurrentUserID();
-    const listUserID = participantIDs.filter(ID => ID != botID && ID != senderID);
-    var id = listUserID[Math.floor(Math.random() * listUserID.length)];
-    var name = (await usersData.get(id)).name
-    var arraytag = [];
-    arraytag.push({ id: senderID, tag: namee });
-    arraytag.push({ id: id, tag: name });
+    // Exclude bots
+    participants = participants.filter((id) => id != api.getCurrentUserID());
 
-    let Avatar = (await axios.get(`https://graph.facebook.com/${senderID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: "arraybuffer" })).data;
-    fs.writeFileSync(__dirname + "/cache/avt.png", Buffer.from(Avatar, "utf-8"));
+    let sender = event.senderID;
+    let mentionUser = Object.keys(event.mentions || {})[0];
+    let inputText = args.join(" ");
 
-    let gifLove = (await axios.get(`https://i.ibb.co/y4dWfQq/image.gif`, { responseType: "arraybuffer" })).data;
-    fs.writeFileSync(__dirname + "/cache/giflove.png", Buffer.from(gifLove, "utf-8"));
+    // Random couple anime images
+    const coupleImages = [
+      "https://i.ibb.co/6JPZbkm/couple1.jpg",
+      "https://i.ibb.co/zf1czFh/couple2.jpg",
+      "https://i.ibb.co/S3Twv0h/couple3.jpg",
+    ];
+    const randomImage =
+      coupleImages[Math.floor(Math.random() * coupleImages.length)];
 
-    let Avatar2 = (await axios.get(`https://graph.facebook.com/${id}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`, { responseType: "arraybuffer" })).data;
-    fs.writeFileSync(__dirname + "/cache/avt2.png", Buffer.from(Avatar2, "utf-8"));
+    // Generate random love/compat %
+    const lovePercent = Math.floor(Math.random() * 100) + 1;
+    const compatPercent = Math.floor(Math.random() * 100) + 1;
 
-    var imglove = [];
+    let msgBody = "";
 
-    imglove.push(fs.createReadStream(__dirname + "/cache/avt.png"));
-    imglove.push(fs.createReadStream(__dirname + "/cache/giflove.png"));
-    imglove.push(fs.createReadStream(__dirname + "/cache/avt2.png"));
+    // Case 1: Pair with a mention
+    if (mentionUser) {
+      msgBody =
+        `💖 Everyone, congratulate the new couple 💖\n\n` +
+        `❤️ ${threadInfo.nicknames[sender] || sender} 💕 ${threadInfo.nicknames[mentionUser] || mentionUser} ❤️\n` +
+        `Love percentage: "${lovePercent}% 💘"\n` +
+        `Compatibility ratio: "${compatPercent}% 💞"\n\n` +
+        `🎉 Congratulations! 🎉`;
+    }
 
-    var msg = {
-      body: `🥰Successful pairing!\n💌Wish you two hundred years of happiness\n💕Double ratio: ${tle}%\n${namee} 💓 ${name}`,
-      mentions: arraytag,
-      attachment: imglove
-    };
+    // Case 2: Pair with <name>
+    else if (inputText.toLowerCase().startsWith("with ")) {
+      const name = inputText.slice(5).trim();
+      if (!name)
+        return api.sendMessage(
+          "⚠️ Please provide a name!",
+          event.threadID,
+          event.messageID
+        );
 
-    return api.sendMessage(msg, event.threadID, event.messageID);
+      msgBody =
+        `💖 Everyone, congratulate the new couple 💖\n\n` +
+        `❤️ ${threadInfo.nicknames[sender] || sender} 💕 ${name} ❤️\n` +
+        `Love percentage: "${lovePercent}% 💘"\n` +
+        `Compatibility ratio: "${compatPercent}% 💞"\n\n` +
+        `🎉 Congratulations! 🎉`;
+    }
+
+    // Case 3: Random male + female pair
+    else {
+      if (participants.length < 2) {
+        return api.sendMessage(
+          "⚠️ Not enough members to make a pair!",
+          event.threadID,
+          event.messageID
+        );
+      }
+
+      // Pick 2 random members
+      let random1 =
+        participants[Math.floor(Math.random() * participants.length)];
+      let random2;
+      do {
+        random2 =
+          participants[Math.floor(Math.random() * participants.length)];
+      } while (random1 === random2);
+
+      msgBody =
+        `💖 Random couple from the group 💖\n\n` +
+        `❤️ ${threadInfo.nicknames[random1] || random1} 💕 ${
+          threadInfo.nicknames[random2] || random2
+        } ❤️\n` +
+        `Love percentage: "${lovePercent}% 💘"\n` +
+        `Compatibility ratio: "${compatPercent}% 💞"\n\n` +
+        `🎉 Congratulations! 🎉`;
+    }
+
+    // Fetch image
+    const imageStream = (
+      await axios.get(randomImage, { responseType: "stream" })
+    ).data;
+
+    api.sendMessage(
+      {
+        body: msgBody,
+        attachment: imageStream,
+      },
+      event.threadID,
+      event.messageID
+    );
+  } catch (err) {
+    console.error(err);
+    api.sendMessage("❌ Error: " + err.message, event.threadID, event.messageID);
   }
 };
